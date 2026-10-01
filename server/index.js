@@ -5,6 +5,7 @@ import customerRoutes from './routes/customer.routes.js'
 import productRoutes from './routes/product.routes.js'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
+import wishlistRoutes from './routes/wishlist.routes.js';
 
 dotenv.config()
 
@@ -20,6 +21,7 @@ app.use(cookieParser())
 
 app.use('/customers', customerRoutes)
 app.use('/products', productRoutes)
+app.use('/wishlist', wishlistRoutes)
 
 mongoose.connect(process.env.dbUrl)
     .then(() => console.log('✅ DB Connected'))

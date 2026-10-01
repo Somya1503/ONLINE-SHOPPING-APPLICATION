@@ -17,6 +17,10 @@ const customerSchema = new mongoose.Schema({
     phone: {
         type: String,
         required: true
+    },
+    wishlist: {
+        type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
+        default: []
     }
 }, {timestamps: true})
 
