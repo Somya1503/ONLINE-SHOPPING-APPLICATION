@@ -1,47 +1,30 @@
-
 import express from 'express'
 import mongoose from 'mongoose'
 import dotenv from 'dotenv'
 import customerRoutes from './routes/customer.routes.js'
+import productRoutes from './routes/product.routes.js'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
 
 dotenv.config()
 
-console.log("DB URL:", process.env.dbUrl)
-
 const app = express()
-
-const PORT = 8089
-
-
-console.log("Starting MongoDB connection...")
-
-mongoose.connect(process.env.dbUrl)
-.then(() => {
-    console.log("✅ DB Connected")
-})
-.catch((err) => {
-    console.log("❌ DB Connection Failed")
-    console.log(err.name)
-    console.log(err.message)
-})
-
+const PORT = process.env.PORT || 8089
 
 app.use(cors({
-    origin: 'http://localhost:5173',
+    origin: process.env.CLIENT_URL || 'http://localhost:5173',
     credentials: true
 }))
-
-
 app.use(express.json())
-
 app.use(cookieParser())
 
-
 app.use('/customers', customerRoutes)
+app.use('/products', productRoutes)
 
+mongoose.connect(process.env.dbUrl)
+    .then(() => console.log('✅ DB Connected'))
+    .catch((err) => console.error('❌ DB Connection Failed:', err.message))
 
-app.listen(PORT, () => {
-    console.log(`Server Started at ${PORT}`)
-})
+app.get('/health', (_req, res) => res.json({ success: true, message: 'ShopKart API is running' }))
+
+app.listen(PORT, () => console.log(`Server Started at ${PORT}`))
