@@ -1,2 +1,5 @@
 .env
 server/.env
+client/vite-project/.env
+node_modules/
+dist/

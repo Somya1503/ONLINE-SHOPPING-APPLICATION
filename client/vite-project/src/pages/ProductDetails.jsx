@@ -2,9 +2,13 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import { fetchProduct } from '../services/api'
+import { useCart } from '../context/CartContext'
 
 const ProductDetails = () => {
     const { id } = useParams()
+    const { addToCart } = useCart()
+    const [adding, setAdding] = useState(false)
+    const [cartMessage, setCartMessage] = useState('')
     const [product, setProduct] = useState(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
@@ -40,8 +44,8 @@ const ProductDetails = () => {
                                     <p className="mt-5 text-3xl font-extrabold text-slate-900">{Number(product.price).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</p>
                                     <p className="mt-5 leading-7 text-slate-600">{product.description}</p>
                                     <p className={`mt-5 text-sm font-semibold ${product.stock > 0 ? 'text-emerald-700' : 'text-rose-600'}`}>{product.stock > 0 ? `${product.stock} units in stock` : 'Currently out of stock'}</p>
-                                    <button type="button" disabled={product.stock <= 0} onClick={() => window.alert('Cart functionality will be available in a later lab.')} className="mt-8 rounded-xl bg-indigo-700 px-6 py-4 font-bold text-white transition hover:bg-indigo-800 disabled:cursor-not-allowed disabled:bg-slate-300">Add to Cart</button>
-                                    <p className="mt-3 text-xs text-slate-400">Cart is a UI-only feature for this lab.</p>
+                                    <button type="button" disabled={product.stock <= 0 || adding} onClick={async () => {setAdding(true);setCartMessage('');try {await addToCart(product._id);setCartMessage('Added to your cart.')} catch(error) {setCartMessage(error.response?.data?.message || 'Unable to add to cart. Please log in and try again.')} finally {setAdding(false)}}} className="mt-8 rounded-xl bg-indigo-700 px-6 py-4 font-bold text-white transition hover:bg-indigo-800 disabled:cursor-not-allowed disabled:bg-slate-300">{adding ? 'Adding…' : 'Add to Cart'}</button>
+                                    {cartMessage && <p role="status" className="mt-3 text-sm text-indigo-700">{cartMessage}</p>}
                                 </div>
                             </div>
                         )}

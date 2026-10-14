@@ -2,29 +2,35 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { axiosInstance } from '../axiosCalls/axios'
 import { fetchWishlist } from '../services/api'
+import { useCart } from '../context/CartContext'
 
 function Navbar() {
     const [loader, setLoader] = useState(false)
     const [wishlistCount, setWishlistCount] = useState(0)
     const [logoutError, setLogoutError] = useState('')
     const navigate = useNavigate()
+    const { itemCount, refreshCart, clearCart } = useCart()
 
     useEffect(() => {
         let active = true
         fetchWishlist().then((items) => { if (active) setWishlistCount(items.length) }).catch(() => {})
+        refreshCart().catch(() => {})
         const updateCount = (event) => {
             if (typeof event.detail?.count === 'number') setWishlistCount(event.detail.count)
             else fetchWishlist().then((items) => setWishlistCount(items.length)).catch(() => {})
         }
         window.addEventListener('wishlist-updated', updateCount)
-        return () => { active = false; window.removeEventListener('wishlist-updated', updateCount) }
-    }, [])
+        const updateCart = () => refreshCart().catch(() => {})
+        window.addEventListener('cart-updated', updateCart)
+        return () => { active = false; window.removeEventListener('wishlist-updated', updateCount); window.removeEventListener('cart-updated', updateCart) }
+    }, [refreshCart])
 
     const handleLogout = async () => {
         try {
             setLoader(true)
             setLogoutError('')
             await axiosInstance.post('/customers/logout')
+            clearCart()
             navigate('/login')
         } catch (error) {
             setLogoutError(error.response?.data?.message || 'Could not log out. Please try again.')
@@ -40,6 +46,8 @@ function Navbar() {
                 <Link to="/home" className="text-sm font-semibold text-slate-600 hover:text-indigo-700">Home</Link>
                 <Link to="/products" className="text-sm font-semibold text-slate-600 hover:text-indigo-700">Products</Link>
                 <Link to="/wishlist" className="rounded-xl bg-rose-50 px-3 py-2 text-sm font-bold text-rose-700 hover:bg-rose-100">Wishlist <span>({wishlistCount})</span></Link>
+                <Link to="/cart" className="rounded-xl bg-indigo-50 px-3 py-2 text-sm font-bold text-indigo-700 hover:bg-indigo-100">Cart ({itemCount})</Link>
+                <Link to="/orders" className="text-sm font-semibold text-slate-600 hover:text-indigo-700">My Orders</Link>
                 <button onClick={handleLogout} disabled={loader} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-600 disabled:opacity-50">{loader ? 'Logging out…' : 'Logout'}</button>
             </div>
             {logoutError && <p role="alert" className="w-full text-right text-xs text-rose-700">{logoutError}</p>}
