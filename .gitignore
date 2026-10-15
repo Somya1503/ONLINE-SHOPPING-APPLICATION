@@ -1,5 +1,29 @@
+# Environment variables and secrets
 .env
+.env.*
+!.env.example
 server/.env
 client/vite-project/.env
+
+# Dependencies
 node_modules/
+client/vite-project/node_modules/
+server/node_modules/
+
+# Build output
 dist/
+client/vite-project/dist/
+build/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# IDE settings
+.vscode/
+.idea/
