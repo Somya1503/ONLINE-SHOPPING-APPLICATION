@@ -62,7 +62,7 @@ Before running the application, install:
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/YOUR-USERNAME/ONLINE-SHOPPING-APPLICATION.git
+git clone https://github.com/Somya1503/ONLINE-SHOPPING-APPLICATION.git
 cd ONLINE-SHOPPING-APPLICATION
 ```
 
@@ -124,4 +124,4 @@ This application uses Razorpay Test Mode for testing payment workflows.
 
 ## Author
 
-Add your name here.
+Somya
