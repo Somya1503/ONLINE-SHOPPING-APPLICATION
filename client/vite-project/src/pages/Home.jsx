@@ -1,27 +1,67 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import Navbar from '../components/Navbar'
+import Layout from '../components/Layout'
+import ProductCard from '../components/ProductCard'
+import { PackageIcon, ShieldIcon, HeartIcon } from '../components/Icons'
+import { fetchProducts, fetchWishlist } from '../services/api'
+import { categoryList } from '../utils/categories'
 
-const Home = () => (
-    <div className="min-h-screen bg-slate-50">
-        <Navbar />
-        <main className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-            <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-indigo-950 to-indigo-700 px-7 py-14 text-white sm:px-12 sm:py-20">
-                <p className="text-sm font-bold uppercase tracking-[0.2em] text-indigo-200">Welcome to ShopKart</p>
-                <h1 className="mt-4 max-w-2xl text-4xl font-black tracking-tight sm:text-6xl">Your next favourite is waiting.</h1>
-                <p className="mt-5 max-w-xl leading-7 text-indigo-100">Explore our product catalogue, search by name, and filter by category to find what you need.</p>
-                <Link to="/products" className="mt-8 inline-flex rounded-xl bg-white px-6 py-3 font-bold text-indigo-950 transition hover:bg-indigo-100">Explore Products →</Link>
+const perks = [
+    { Icon: ShieldIcon, text: 'Secure checkout with Razorpay' },
+    { Icon: PackageIcon, text: 'Track every order from your account' },
+    { Icon: HeartIcon, text: 'Save products to your wishlist for later' }
+]
+
+const Home = () => {
+    const [latest, setLatest] = useState([])
+    const [savedIds, setSavedIds] = useState(() => new Set())
+
+    useEffect(() => {
+        let active = true
+        fetchProducts({ sort: 'newest' }).then((items) => { if (active) setLatest(items.slice(0, 4)) }).catch(() => {})
+        fetchWishlist().then((items) => { if (active) setSavedIds(new Set(items.map((p) => p._id))) }).catch(() => {})
+        return () => { active = false }
+    }, [])
+
+    return (
+        <Layout>
+            <section className="pt-2 sm:pt-6">
+                <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
+                    <h1 className="max-w-4xl font-display text-4xl font-extrabold leading-[1.03] sm:text-5xl lg:text-7xl">Everything for your desk, wardrobe, shelf and home.</h1>
+                    <Link to="/products" className="btn btn-accent shrink-0 self-start px-7 py-3.5 text-base lg:self-auto">Browse all products</Link>
+                </div>
+                <div className="mt-10 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+                    {categoryList.map(({ name, Icon, tile, glyph }, i) => (
+                        <Link key={name} to={`/products?category=${name}`} style={{ animationDelay: `${i * 90}ms` }} className={`block-in group flex min-h-[170px] flex-col justify-between rounded-2xl p-5 transition-[filter] hover:brightness-95 sm:min-h-[260px] sm:p-6 lg:min-h-[320px] ${tile}`}>
+                            <Icon size={40} className={glyph} />
+                            <span className="font-display text-xl font-extrabold min-[420px]:text-2xl sm:text-4xl">{name}</span>
+                        </Link>
+                    ))}
+                </div>
             </section>
-            <div className="mt-8 grid gap-4 sm:grid-cols-3">
-                {[['01', 'Browse', 'Explore products from the live catalogue.'], ['02', 'Discover', 'Search by name and filter by category.'], ['03', 'Learn more', 'Open any product to view its full details.']].map(([number, title, description]) => (
-                    <div key={number} className="rounded-2xl border border-slate-200 bg-white p-6">
-                        <p className="text-sm font-black text-indigo-600">{number}</p>
-                        <h2 className="mt-3 text-lg font-bold text-slate-900">{title}</h2>
-                        <p className="mt-2 text-sm leading-6 text-slate-500">{description}</p>
+
+            {latest.length > 0 && (
+                <section className="mt-16">
+                    <div className="mb-6 flex items-end justify-between gap-4">
+                        <h2 className="font-display text-2xl font-extrabold sm:text-3xl">New arrivals</h2>
+                        <Link to="/products" className="text-sm font-semibold text-brand hover:underline">See all products</Link>
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-8 lg:grid-cols-4">
+                        {latest.map((product) => <ProductCard key={product._id} product={product} initialSaved={savedIds.has(product._id)} />)}
+                    </div>
+                </section>
+            )}
+
+            <section className="mt-16 grid gap-3 sm:grid-cols-3">
+                {perks.map(({ Icon, text }) => (
+                    <div key={text} className="flex items-center gap-3 rounded-xl bg-white px-5 py-4 border border-line">
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-soft text-brand"><Icon size={20} /></span>
+                        <p className="text-sm font-semibold leading-snug">{text}</p>
                     </div>
                 ))}
-            </div>
-        </main>
-    </div>
-)
+            </section>
+        </Layout>
+    )
+}
 
 export default Home

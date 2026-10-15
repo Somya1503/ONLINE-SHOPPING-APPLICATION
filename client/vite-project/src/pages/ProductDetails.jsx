@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import Navbar from '../components/Navbar'
+import Layout from '../components/Layout'
+import { ErrorState, PanelLoading } from '../components/States'
+import { ArrowLeftIcon, BagIcon, CheckIcon, PackageIcon, ShieldIcon } from '../components/Icons'
 import { fetchProduct } from '../services/api'
 import { useCart } from '../context/CartContext'
+import { money, onImageError } from '../utils/format'
 
 const ProductDetails = () => {
     const { id } = useParams()
     const { addToCart } = useCart()
     const [adding, setAdding] = useState(false)
-    const [cartMessage, setCartMessage] = useState('')
+    const [added, setAdded] = useState(false)
+    const [cartError, setCartError] = useState('')
     const [product, setProduct] = useState(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
@@ -17,40 +21,63 @@ const ProductDetails = () => {
         let active = true
         setLoading(true)
         setError('')
+        setAdded(false)
         fetchProduct(id)
             .then((data) => { if (active) setProduct(data) })
             .catch((err) => {
-                if (active) setError(err.response?.status === 404 ? 'Product not found.' : (err.response?.data?.message || 'Something went wrong while loading this product.'))
+                if (active) setError(err.response?.status === 404 ? 'This product could not be found.' : (err.response?.data?.message || 'Something went wrong while loading this product.'))
             })
             .finally(() => { if (active) setLoading(false) })
         return () => { active = false }
     }, [id])
 
+    const handleAdd = async () => {
+        setAdding(true); setCartError(''); setAdded(false)
+        try { await addToCart(product._id); setAdded(true) }
+        catch (error) { setCartError(error.response?.data?.message || 'Unable to add to cart. Please log in and try again.') }
+        finally { setAdding(false) }
+    }
+
+    const stock = Number(product?.stock)
+
     return (
-        <div className="min-h-screen bg-slate-50">
-            <Navbar />
-            <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-                <Link to="/products" className="mb-6 inline-flex text-sm font-semibold text-indigo-700 hover:underline">← Back to products</Link>
-                {loading ? <div className="py-24 text-center font-semibold text-slate-600">Loading product...</div>
-                    : error ? <div className="rounded-2xl border border-rose-200 bg-rose-50 p-8 text-center text-rose-800">{error}</div>
-                        : product && (
-                            <div className="grid overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm md:grid-cols-2">
-                                <div className="min-h-72 bg-slate-100">
-                                    <img src={product.image} alt={product.name} onError={(event) => { event.currentTarget.src = 'https://placehold.co/900x900/f1f5f9/64748b?text=ShopKart+Product' }} className="h-full max-h-[620px] min-h-72 w-full object-cover" />
-                                </div>
-                                <div className="flex flex-col justify-center p-6 sm:p-10">
-                                    <span className="w-fit rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-700">{product.category}</span>
-                                    <h1 className="mt-4 text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">{product.name}</h1>
-                                    <p className="mt-5 text-3xl font-extrabold text-slate-900">{Number(product.price).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</p>
-                                    <p className="mt-5 leading-7 text-slate-600">{product.description}</p>
-                                    <p className={`mt-5 text-sm font-semibold ${product.stock > 0 ? 'text-emerald-700' : 'text-rose-600'}`}>{product.stock > 0 ? `${product.stock} units in stock` : 'Currently out of stock'}</p>
-                                    <button type="button" disabled={product.stock <= 0 || adding} onClick={async () => {setAdding(true);setCartMessage('');try {await addToCart(product._id);setCartMessage('Added to your cart.')} catch(error) {setCartMessage(error.response?.data?.message || 'Unable to add to cart. Please log in and try again.')} finally {setAdding(false)}}} className="mt-8 rounded-xl bg-indigo-700 px-6 py-4 font-bold text-white transition hover:bg-indigo-800 disabled:cursor-not-allowed disabled:bg-slate-300">{adding ? 'Adding…' : 'Add to Cart'}</button>
-                                    {cartMessage && <p role="status" className="mt-3 text-sm text-indigo-700">{cartMessage}</p>}
-                                </div>
-                            </div>
-                        )}
-            </main>
-        </div>
+        <Layout width="max-w-6xl">
+            <Link to="/products" className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-brand hover:underline"><ArrowLeftIcon size={16} />Back to products</Link>
+            {loading ? <PanelLoading label="Loading product…" />
+                : error ? <ErrorState message={error} />
+                : product && (
+                    <div className="grid gap-8 md:grid-cols-2 lg:gap-14">
+                        <div className="self-start overflow-hidden rounded-2xl border border-line bg-brand-soft md:sticky md:top-24">
+                            <img src={product.image} alt={product.name} onError={onImageError} className={`aspect-square w-full object-cover ${stock > 0 ? '' : 'opacity-50 grayscale'}`} />
+                        </div>
+                        <div className="flex flex-col">
+                            <Link to={`/products?category=${encodeURIComponent(product.category)}`} className="w-fit rounded-full bg-brand-soft px-3.5 py-1.5 text-sm font-semibold text-brand hover:bg-brand hover:text-white">{product.category}</Link>
+                            <h1 className="mt-4 font-display text-3xl font-extrabold leading-tight sm:text-4xl">{product.name}</h1>
+                            <p className="mt-4 font-display text-4xl font-bold">{money(product.price)}</p>
+                            <p className={`mt-4 inline-flex items-center gap-2 text-sm font-semibold ${stock > 0 ? 'text-brand' : 'text-coral'}`}>
+                                <span className={`h-2 w-2 rounded-full ${stock > 0 ? (stock <= 5 ? 'bg-saffron' : 'bg-brand') : 'bg-coral'}`} />
+                                {stock > 0 ? (stock <= 5 ? `Only ${stock} left in stock` : `${stock} in stock`) : 'Currently out of stock'}
+                            </p>
+                            <p className="mt-6 max-w-prose leading-7 text-muted">{product.description}</p>
+
+                            <button type="button" disabled={stock <= 0 || adding} onClick={handleAdd} className="btn btn-primary mt-8 w-full py-4 text-base sm:w-auto sm:px-12">
+                                <BagIcon size={18} />{adding ? 'Adding…' : stock > 0 ? 'Add to cart' : 'Unavailable'}
+                            </button>
+                            {added && (
+                                <p role="status" className="mt-4 flex flex-wrap items-center gap-2 rounded-md bg-brand-soft px-4 py-3 text-sm font-semibold text-brand">
+                                    <CheckIcon size={16} />Added to your cart. <Link to="/cart" className="underline">View cart</Link>
+                                </p>
+                            )}
+                            {cartError && <p role="alert" className="mt-4 rounded-md bg-coral-soft px-4 py-3 text-sm text-coral">{cartError}</p>}
+
+                            <ul className="mt-10 space-y-3 border-t border-line pt-6 text-sm text-muted">
+                                <li className="flex items-center gap-3"><ShieldIcon size={18} className="text-brand" />Pay securely with Razorpay at checkout</li>
+                                <li className="flex items-center gap-3"><PackageIcon size={18} className="text-brand" />Follow your order status under My orders</li>
+                            </ul>
+                        </div>
+                    </div>
+                )}
+        </Layout>
     )
 }
 

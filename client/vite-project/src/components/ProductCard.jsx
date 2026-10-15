@@ -1,23 +1,36 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { addWishlistProduct, removeWishlistProduct } from '../services/api'
 import { useCart } from '../context/CartContext'
+import { money, onImageError } from '../utils/format'
+import { BagIcon, CheckIcon, HeartIcon } from './Icons'
 
-const ProductCard = ({ product }) => {
-    const inStock = Number(product.stock) > 0
+const ProductCard = ({ product, initialSaved = false, onUnsaved }) => {
+    const stock = Number(product.stock)
+    const inStock = stock > 0
     const { addToCart } = useCart()
     const [adding, setAdding] = useState(false)
-    const [cartMessage, setCartMessage] = useState('')
-    const [saved, setSaved] = useState(false)
+    const [justAdded, setJustAdded] = useState(false)
+    const [cartError, setCartError] = useState('')
+    const [override, setSaved] = useState(null)
+    const saved = override ?? initialSaved
     const [saving, setSaving] = useState(false)
     const [message, setMessage] = useState('')
+    const timer = useRef(null)
+
+    useEffect(() => () => clearTimeout(timer.current), [])
 
     const handleAddToCart = async () => {
         if (adding || !inStock) return
-        setAdding(true); setCartMessage('')
-        try { await addToCart(product._id); setCartMessage('Added to cart.'); }
-        catch (error) { setCartMessage(error.response?.data?.message || 'Unable to add to cart. Please log in and try again.'); }
-        finally { setAdding(false); }
+        setAdding(true); setCartError('')
+        try {
+            await addToCart(product._id)
+            setJustAdded(true)
+            clearTimeout(timer.current)
+            timer.current = setTimeout(() => setJustAdded(false), 2200)
+        } catch (error) {
+            setCartError(error.response?.data?.message || 'Unable to add to cart. Please log in and try again.')
+        } finally { setAdding(false) }
     }
 
     const toggleWishlist = async () => {
@@ -28,6 +41,7 @@ const ProductCard = ({ product }) => {
             if (saved) {
                 await removeWishlistProduct(product._id)
                 setSaved(false)
+                onUnsaved?.(product._id)
             } else {
                 await addWishlistProduct(product._id)
                 setSaved(true)
@@ -41,25 +55,29 @@ const ProductCard = ({ product }) => {
     }
 
     return (
-        <article className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
-            <div className="relative">
-                <Link to={`/products/${product._id}`} className="block overflow-hidden bg-slate-100">
-                    <img src={product.image} alt={product.name} className="h-56 w-full object-cover transition duration-300 group-hover:scale-105" onError={(event) => { event.currentTarget.src = 'https://placehold.co/600x400/f1f5f9/64748b?text=ShopKart+Product' }} />
+        <article className="flex flex-col">
+            <div className="relative aspect-[4/3] overflow-hidden rounded-xl border border-line bg-brand-soft">
+                <Link to={`/products/${product._id}`} aria-label={`View ${product.name}`} className="block h-full">
+                    <img src={product.image} alt={product.name} loading="lazy" onError={onImageError} className={`h-full w-full object-cover ${inStock ? '' : 'opacity-50 grayscale'}`} />
                 </Link>
-                <button type="button" onClick={toggleWishlist} disabled={saving} aria-label={saved ? 'Remove from wishlist' : 'Add to wishlist'} className={`absolute right-3 top-3 rounded-full px-4 py-2 text-sm font-bold shadow transition disabled:opacity-60 ${saved ? 'bg-rose-600 text-white' : 'bg-white text-slate-800 hover:bg-rose-50'}`}>
-                    {saving ? 'Saving…' : saved ? '♥ Saved' : '♡ Wishlist'}
+                <button type="button" onClick={toggleWishlist} disabled={saving} aria-pressed={saved} aria-label={saved ? `Remove ${product.name} from wishlist` : `Save ${product.name} to wishlist`} className={`absolute right-2.5 top-2.5 flex h-10 w-10 items-center justify-center rounded-full shadow-sm transition-colors disabled:opacity-60 ${saved ? 'bg-coral text-white' : 'bg-white text-ink hover:text-coral'}`}>
+                    <HeartIcon size={18} filled={saved} />
                 </button>
+                {!inStock && <span className="absolute bottom-2.5 left-2.5 rounded-md bg-white px-2.5 py-1 text-xs font-bold text-ink">Out of stock</span>}
+                {inStock && stock <= 5 && <span className="absolute bottom-2.5 left-2.5 rounded-md bg-saffron px-2.5 py-1 text-xs font-bold text-ink">Only {stock} left</span>}
             </div>
-            <div className="space-y-3 p-5">
-                <div className="flex items-start justify-between gap-3">
-                    <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">{product.category}</span>
-                    <span className={`text-xs font-semibold ${inStock ? 'text-emerald-700' : 'text-rose-600'}`}>{inStock ? `${product.stock} units left` : 'Out of stock'}</span>
+            <div className="mt-3 flex flex-1 flex-col">
+                <p className="text-xs font-medium text-muted">{product.category}</p>
+                <h2 className="mt-1 line-clamp-2 min-h-[2.75rem] font-sans text-base font-semibold leading-snug">
+                    <Link to={`/products/${product._id}`} className="hover:text-brand">{product.name}</Link>
+                </h2>
+                <p className="mt-1 font-display text-xl font-bold">{money(product.price)}</p>
+                <div className="mt-auto pt-3">
+                    <button type="button" disabled={!inStock || adding} onClick={handleAddToCart} className={`btn w-full ${justAdded ? 'bg-brand-soft text-brand' : 'btn-primary'}`}>
+                        {justAdded ? <><CheckIcon size={16} />Added to cart</> : <><BagIcon size={16} />{adding ? 'Adding…' : inStock ? 'Add to cart' : 'Unavailable'}</>}
+                    </button>
                 </div>
-                <h2 className="line-clamp-2 min-h-12 text-lg font-bold text-slate-900">{product.name}</h2>
-                <p className="text-xl font-extrabold text-slate-900">{Number(product.price).toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 })}</p>
-                {message && <p role="alert" className="text-sm text-rose-700">{message}</p>}
-                {cartMessage && <p role="status" className={`text-sm ${cartMessage.startsWith('Added') ? 'text-emerald-700' : 'text-rose-700'}`}>{cartMessage}</p>}
-                <div className="grid grid-cols-2 gap-2"><Link to={`/products/${product._id}`} className="rounded-xl border border-slate-200 px-3 py-3 text-center text-sm font-semibold text-slate-800 hover:bg-slate-50">View Details</Link><button type="button" disabled={!inStock || adding} onClick={handleAddToCart} className="rounded-xl bg-indigo-700 px-3 py-3 text-sm font-semibold text-white transition hover:bg-indigo-800 disabled:cursor-not-allowed disabled:bg-slate-300">{adding ? 'Adding…' : 'Add to Cart'}</button></div>
+                {(message || cartError) && <p role="alert" className="mt-2 text-sm text-coral">{message || cartError}</p>}
             </div>
         </article>
     )

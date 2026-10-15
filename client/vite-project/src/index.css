@@ -1,2 +1,86 @@
-
 @import "tailwindcss";
+
+@theme {
+  --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+
+  --color-ink: #12231f;
+  --color-muted: #566763;
+  --color-line: #d9e1de;
+  --color-surface: #f4f6f5;
+
+  --color-brand: #0f5c52;
+  --color-brand-dark: #0a423b;
+  --color-brand-soft: #e3efec;
+
+  --color-saffron: #f5a623;
+  --color-saffron-soft: #fdf0d5;
+
+  --color-coral: #c73e32;
+  --color-coral-soft: #fbe6e3;
+}
+
+@layer base {
+  body {
+    @apply bg-surface font-sans text-ink antialiased;
+  }
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply bg-brand text-white hover:bg-brand-dark;
+  }
+  .btn-accent {
+    @apply bg-saffron text-ink hover:brightness-95;
+  }
+  .btn-outline {
+    @apply border border-line bg-white text-ink hover:border-ink;
+  }
+  .btn-danger-ghost {
+    @apply text-coral hover:bg-coral-soft;
+  }
+  .input {
+    @apply w-full rounded-md border border-line bg-white px-3.5 py-3 text-sm text-ink placeholder:text-muted/70 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20;
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-semibold text-ink;
+  }
+  .panel {
+    @apply rounded-xl border border-line bg-white;
+  }
+}
+
+/* The one orchestrated moment: category blocks arrive in sequence on first load. */
+@keyframes block-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+.block-in {
+  animation: block-in 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, #e7ecea 25%, #f1f4f3 50%, #e7ecea 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .block-in, .skeleton { animation: none; }
+}
