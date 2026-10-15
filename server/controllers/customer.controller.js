@@ -6,13 +6,15 @@ import { genToken } from "../utils/generateToken.js"
 
 // Cookie Options
 
+const isProduction = process.env.NODE_ENV === 'production'
+
 const cookiesOptions = {
     httpOnly: true,
-    secure: false,
-    sameSite: 'lax',
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+    path: '/',
     maxAge: 24 * 60 * 60 * 1000
 }
-
 
 // REGISTER CUSTOMER
 
@@ -214,10 +216,11 @@ export const logoutCustomer = async (req, res) => {
     try {
         res.clearCookie("token", {
             httpOnly: true,
-            secure: false,
-            sameSite: 'lax',
+            secure: isProduction,
+            sameSite: isProduction ? 'none' : 'lax',
             path: '/'
         })
+
         res.status(200).json({
             success: true,
             message: "Logged out successfully"
